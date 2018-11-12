@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.util.List;
 
 import com.newsfeed.util.Headline;
-import com.newsfeed.util.HeadlineWord;
 
 public class HeadlineImpl implements Headline, Serializable {
 

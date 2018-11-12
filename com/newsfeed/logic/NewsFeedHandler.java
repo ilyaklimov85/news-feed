@@ -1,24 +1,19 @@
 package com.newsfeed.logic;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.net.Socket;
-import java.util.Collections;
 import java.util.List;
-import java.util.SortedSet;
 
 import com.newsfeed.util.Headline;
-import com.newsfeed.util.HeadlineWord;
 
 public class NewsFeedHandler implements Runnable {
 	private Socket socket;
-	private SortedSet<TimestampedNewsItem> newsItemsSet;
+	private List<TimestampedNewsItem> newsItemsList;
 
-	public NewsFeedHandler(Socket socket, SortedSet<TimestampedNewsItem> newsItemsSet) {
+	public NewsFeedHandler(Socket socket, List<TimestampedNewsItem> newsItemsList) {
 		this.socket = socket;
-		this.newsItemsSet = newsItemsSet;
+		this.newsItemsList = newsItemsList;
 	}
 
 	@Override
@@ -27,12 +22,12 @@ public class NewsFeedHandler implements Runnable {
 			try (ObjectInputStream obejectInputStream = new ObjectInputStream(socket.getInputStream());) {
 				NewsItem newsItem;
 				while ((newsItem = (NewsItem) obejectInputStream.readObject()) != null) {
-					if (newsItemsSet != null) {
-						
-						if (isPositiveNewsItem(newsItem))
-							newsItemsSet.add(new TimestampedNewsItem(System.currentTimeMillis(), newsItem));
+					if (newsItemsList != null) {
+						if (isPositiveNewsItem(newsItem)) {
+							newsItemsList.add(new TimestampedNewsItem(System.currentTimeMillis(), newsItem));
+							System.out.println(newsItem.getHeadline().asString() + " server");
+						}
 					}
-//					System.out.println(newsItem.getHeadline().asString() + " server");
 				}
 
 			} catch (IOException e) {
@@ -57,7 +52,8 @@ public class NewsFeedHandler implements Runnable {
 					if (headlineWord.isPositive())
 						positiveCount++;
 				}
-				isPositive = positiveCount > (int) Math.ceil(words.size() / 2);
+				//more than half of words are positive
+				if(positiveCount > 0) isPositive = Math.ceil(words.size() / positiveCount) < 2;
 			}
 		}
 		return isPositive;

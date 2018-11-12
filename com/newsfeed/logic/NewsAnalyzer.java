@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
@@ -27,13 +29,13 @@ public class NewsAnalyzer {
 
 		) {
 			
-			SortedSet<TimestampedNewsItem> set = Collections.synchronizedSortedSet(new TreeSet<TimestampedNewsItem>());
+			List<TimestampedNewsItem> newsItemsList = Collections.synchronizedList(new ArrayList<TimestampedNewsItem>());
 
-			summarizer.scheduleAtFixedRate(new NewsSummarizer(set), 0, RATE, TimeUnit.SECONDS);
+			summarizer.scheduleAtFixedRate(new NewsSummarizer(newsItemsList), 0, RATE, TimeUnit.SECONDS);
 
 			while (true) {
 				Socket socket = serverSocket.accept();
-				handlers.execute(new NewsFeedHandler(socket, set));
+				handlers.execute(new NewsFeedHandler(socket, newsItemsList));
 			}
 
 			// continue handling incoming news items from clients until the user terminates

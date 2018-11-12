@@ -4,11 +4,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -21,41 +22,91 @@ public class NewsFeed {
 	static ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
 	private static final int RATE = 10;
 	
+	private HeadlineGenerator headlineGenerator;
+	private PriorityGenerator priorityGenerator;
+	
+	public NewsFeed(HeadlineGenerator headlineGenerator, PriorityGenerator priorityGenerator) {
+		this.headlineGenerator = headlineGenerator;
+		this.priorityGenerator = priorityGenerator;
+	}
+	
+	public NewsItem getNewsItem() {
+		return new NewsItem(headlineGenerator.generateHeadline(), priorityGenerator.generatePriority());
+	}
+
+	
 	public static void main(String[] args) {
+
+		HeadlineGenerator headlineGenerator = () -> {
+			// Generate a random number from 3 to 5
+			Random random = new Random();
+			int wordCount = 3 + random.nextInt(3);
+
+			// create a list that will store wordCount unique items. Each item is an index
+			// of a randomly picked HeadlineWord item
+			ArrayList<Integer> indexes = new ArrayList<Integer>();
+			while (indexes.size() < wordCount) {
+				int nextInt = random.nextInt(HeadlineWord.values().length);
+				if (!indexes.contains(nextInt)) {
+					indexes.add(nextInt);
+				}
+			}
+			// create list of words that correspond to indexes
+			List<HeadlineWord> words = new ArrayList<>();
+			indexes.forEach(index -> words.add(HeadlineWord.values()[index]));
+
+			HeadlineImpl headine = new HeadlineImpl(words);
+
+			return headine;
+		};
 		
-		try(Socket socket = new Socket("127.0.0.1", 1500);
+		
+		PriorityGenerator priorityGenerator = () -> {
+			//TODO find out if my understanding of the priorities distribution is correct
+			int[] priorities = {9,
+			                    8,8,
+			                    7,7,7,
+			                    6,6,6,6,
+			                    5,5,5,5,5,
+			                    4,4,4,4,4,4,
+			                    3,3,3,3,3,3,3,
+			                    2,2,2,2,2,2,2,2,
+			                    1,1,1,1,1,1,1,1,1,
+			                    0,0,0,0,0,0,0,0,0,0};
+			
+				//get a random index from 0 to priorities.length-1
+				int i = new Random().nextInt(priorities.length-1);
+				//get an item with that index
+				return priorities[i];
+
+		};
+		
+		
+		NewsFeed newsFeed = new NewsFeed(headlineGenerator, priorityGenerator);
+		
+		try (Socket socket = new Socket("127.0.0.1", 1500);
 //				PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
 				InputStream consoleInput = System.in;
 				BufferedReader stdIn = new BufferedReader(new InputStreamReader(consoleInput));
 				ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
-				
-				){
-			
-			//can be easily changed to accept generator classes through xml configuration, or parameters
-			HeadlineGenerator headlineGenerator = new HeadlineGeneratorImpl();
-			PriorityGenerator priorityGenerator = new PriorityGeneratorImpl();
-			
-			Runnable task = new Runnable() {
-				
-				@Override
-				public void run() {
-					NewsItem newsItem = new NewsItem(headlineGenerator, priorityGenerator);
-					try {
-						outputStream.writeObject(newsItem);
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-//					pw.println(newsItem.getPriority() + " " + newsItem.getHeadline() + " " + newsItem.isPositive());
+
+		) {
+
+			service.scheduleAtFixedRate(() -> {
+				try {
+					outputStream.writeObject(newsFeed.getNewsItem());
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
-			};
-			
-			service.scheduleAtFixedRate(task, 0, RATE, TimeUnit.SECONDS);
-			
-			//continue sending news items to the server until the user enters "exit" to stop the client
+			}, 0, RATE, TimeUnit.SECONDS);
+
+			// continue sending news items to the server until the user enters "exit" to
+			// stop the client
 			String input;
-			while((input= stdIn.readLine()) != null) {
-				if(input.equals("exit")) break;
+			while ((input = stdIn.readLine()) != null) {
+				if (input.equals("exit"))
+					break;
 			}
 			
 		} catch (UnknownHostException e) {

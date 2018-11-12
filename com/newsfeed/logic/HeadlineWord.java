@@ -1,4 +1,4 @@
-package com.newsfeed.util;
+package com.newsfeed.logic;
 
 public enum HeadlineWord{
 	UP("up", true), 
