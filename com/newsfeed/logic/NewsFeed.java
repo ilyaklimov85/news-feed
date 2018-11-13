@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -19,7 +20,6 @@ import com.newsfeed.util.PriorityGenerator;
 
 public class NewsFeed {
 	
-	static ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
 	private static final int RATE = 10;
 	
 	private HeadlineGenerator headlineGenerator;
@@ -30,7 +30,7 @@ public class NewsFeed {
 		this.priorityGenerator = priorityGenerator;
 	}
 	
-	public NewsItem getNewsItem() {
+	public NewsItem generateNewsItem() {
 		return new NewsItem(headlineGenerator.generateHeadline(), priorityGenerator.generatePriority());
 	}
 
@@ -81,43 +81,49 @@ public class NewsFeed {
 
 		};
 		
-		
 		NewsFeed newsFeed = new NewsFeed(headlineGenerator, priorityGenerator);
 		
+//		TODO Think about restoring connection of server restarts
 		try (Socket socket = new Socket("127.0.0.1", 1500);
 //				PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
 				InputStream consoleInput = System.in;
 				BufferedReader stdIn = new BufferedReader(new InputStreamReader(consoleInput));
 				ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
+				
 
 		) {
-
-			service.scheduleAtFixedRate(() -> {
+			
+			System.out.println("News Feed Started. To stop it type \"stop\" and hit enter");
+			
+			ScheduledExecutorService newsFeedService = Executors.newSingleThreadScheduledExecutor();
+			newsFeedService.scheduleAtFixedRate(() -> {
 				try {
-					outputStream.writeObject(newsFeed.getNewsItem());
+					NewsItem newsItem = newsFeed.generateNewsItem();
+					outputStream.writeObject(newsItem);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-				}
+					newsFeedService.shutdown();
+				} 
 			}, 0, RATE, TimeUnit.SECONDS);
 
-			// continue sending news items to the server until the user enters "exit" to
+			// continue sending news items to the server until the user enters "stop" to
 			// stop the client
 			String input;
 			while ((input = stdIn.readLine()) != null) {
-				if (input.equals("exit"))
+				if (input.equalsIgnoreCase("stop")) {
+					newsFeedService.shutdown();
+					System.out.println("News Feed stopped");
 					break;
+				}
 			}
-			
+
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}finally {
-			service.shutdown();
-			System.out.println("client exit");
 		}
 	}
 
