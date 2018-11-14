@@ -1,8 +1,6 @@
-package com.newsfeed.util;
+package com.common;
 
 import java.util.List;
-
-import com.newsfeed.logic.HeadlineWord;
 
 public interface Headline {
 	

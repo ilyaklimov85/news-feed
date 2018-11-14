@@ -1,4 +1,4 @@
-package com.newsfeed.util;
+package com.feed;
 
 public interface PriorityGenerator {
 	int generatePriority();

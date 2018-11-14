@@ -1,8 +1,6 @@
-package com.newsfeed.logic;
+package com.common;
 import java.io.Serializable;
-import java.util.List;
 
-import com.newsfeed.util.Headline;
 
 public class NewsItem implements Serializable{
 	
@@ -19,7 +17,6 @@ public class NewsItem implements Serializable{
 	public Headline getHeadline() {
 		return headline;
 	}
-
 
 	public int getPriority() {
 		return priority;
