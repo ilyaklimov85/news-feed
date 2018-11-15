@@ -32,4 +32,16 @@ public class HeadlineImpl implements Headline, Serializable {
 	public List<HeadlineWord> getWords() {
 		return words;
 	}
+	
+	@Override
+	public boolean isPositive() {
+		boolean isPositive = false;
+	
+		long positiveWordsCount = words.stream().filter((word) -> word.isPositive()).count();
+		
+		if (positiveWordsCount > 0)
+			isPositive = Math.ceil(words.size() / positiveWordsCount) < 2;
+		
+		return isPositive;
+	}
 }

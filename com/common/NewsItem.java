@@ -21,19 +21,13 @@ public class NewsItem implements Serializable{
 	public int getPriority() {
 		return priority;
 	}
+
 	
 	public boolean isPositive() {
-		boolean isPositive = false;
-	
 		if (headline == null)
 			return false;
+		
+		return headline.isPositive();
 
-		long positiveWordsCount = headline.getWords().stream().filter((word) -> word.isPositive()).count();
-		
-		if (positiveWordsCount > 0)
-			isPositive = Math.ceil(headline.getWords().size() / positiveWordsCount) < 2;
-		
-		return isPositive;
 	}
-
 }

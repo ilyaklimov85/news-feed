@@ -6,7 +6,6 @@ import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -18,10 +17,12 @@ import java.util.concurrent.TimeUnit;
 import com.common.NewsItem;
 
 public class NewsAnalyzer {
+	
 	private static final int RATE = 10;
 	private static final int PORT = 1500;
 	private static final long TEN_SECONDS = 10000; 
 
+	
 	public static void main(String[] args) {
 
 		ExecutorService handlersService = Executors.newCachedThreadPool();
@@ -44,7 +45,6 @@ public class NewsAnalyzer {
 						if (stdin.equalsIgnoreCase("stop")) {
 //							close the server socket so that the accept() method throws SocketException and the main thread is unblocked. Client sockets will be closed in the finally block
 							serverSocket.close();
-							//TODO think about a more general way to print
 							System.out.println("News Analyzer Stopped");
 							break;
 						}else {
@@ -52,11 +52,7 @@ public class NewsAnalyzer {
 						}
 					}
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
-				} finally {
-					handlersService.shutdown();
-					summarizerService.shutdown();
 				}
 			});
 			userInputHandlerThread.start();
@@ -67,26 +63,29 @@ public class NewsAnalyzer {
 			List<TimestampedNewsItem> incomingNewsItems = Collections.synchronizedList(new ArrayList<TimestampedNewsItem>());
 			
 			summarizerService.scheduleAtFixedRate(() -> {
-//				TODO review this syncronization mechanism 
 				synchronized (incomingNewsItems) {
 
 					long startTime = System.currentTimeMillis() - TEN_SECONDS;
-					
+//					remove all news items that are older than 10 seconds
 					incomingNewsItems.removeIf(item -> item.getTimestamp()<startTime);
-					
+										
 					int size = incomingNewsItems.size();
 					System.out.println("Positive news count for the past 10 seconds: " + size);
-					if(size >0)
+					
+					if (size > 0) {
 						System.out.println("Top headlines:");
-					incomingNewsItems.stream().map(item -> item.getNewsItem()).sorted((o1, o2) -> {
-								if (o1 != null && o2 != null) {
-									int o1priority = o1.getPriority();
-									int o2priority = o2.getPriority();
-									//switch order to have items with highest priorities at the beginning of the list (descending order)
-									return Integer.compare(o2priority, o1priority);
-								}
-								return 0;
-							}).limit(3).map(item -> item.getHeadline().asString()).distinct().forEach(line -> System.out.println(line));
+						incomingNewsItems.stream().map(item -> item.getNewsItem()).sorted((o1, o2) -> {
+							if (o1 != null && o2 != null) {
+								int o1priority = o1.getPriority();
+								int o2priority = o2.getPriority();
+								// switch order to have items with highest priorities at the beginning of the list (descending order)
+								return Integer.compare(o2priority, o1priority);
+							}
+							return 0;
+						}).limit(3).map(item -> item.getHeadline().asString()).distinct()
+								.forEach(line -> System.out.println(line));
+					}
+					System.out.println(" ");
 				}
 			}, RATE, RATE, TimeUnit.SECONDS);
 
@@ -101,39 +100,31 @@ public class NewsAnalyzer {
 						NewsItem newsItem;
 						while ((newsItem = (NewsItem) obejectInputStream.readObject()) != null) {
 							if (newsItem.isPositive()) {
-								incomingNewsItems.add(new TimestampedNewsItem(System.currentTimeMillis(), newsItem));
+								synchronized (incomingNewsItems) {
+									incomingNewsItems.add(new TimestampedNewsItem(System.currentTimeMillis(), newsItem));	
+								}
 							}
 						}
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 
 					} catch (ClassNotFoundException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				});
 				
 			}
 			
-		} catch (SocketException e) {
-			// if SocketException is a result of user stopping the News Analyzer - don't
-			// print the exception
-//			TODO this is not working. Looks like service is not yet shutdown by this time. Think about a better way.
-			if (!summarizerService.isShutdown())
-				e.printStackTrace();
-
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		} finally {
 			handlersService.shutdown();
 			summarizerService.shutdown();
+//			close all clients sockets
 			clientSockets.forEach((socket) -> {
 				try {
 					socket.close();
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			});

@@ -7,5 +7,7 @@ public interface Headline {
 	List<HeadlineWord> getWords();
 	
 	String asString();
+	
+	boolean isPositive();
 
 }
