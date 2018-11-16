@@ -11,7 +11,7 @@ public enum HeadlineWord{
 	FAILURE("failure", false), 
 	HIGH("high", true), 
 	LOW("low", false), 
-	UBER("uber", true), 
+	UBER("über", true), 
 	UNTER("unter", false);
 	
 	private boolean positive;

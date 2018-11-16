@@ -11,7 +11,7 @@ public class HeadlineImpl implements Headline, Serializable {
 	private static final long serialVersionUID = -8814881748384220812L;
 	private List<HeadlineWord> words;
 
-	HeadlineImpl(List<HeadlineWord> words) {
+	public HeadlineImpl(List<HeadlineWord> words) {
 		this.words = words;
 	}
 

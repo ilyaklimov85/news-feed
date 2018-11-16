@@ -18,24 +18,30 @@ import com.common.NewsItem;
 
 public class NewsAnalyzer {
 	
-	private static final int RATE = 10;
-	private static final int PORT = 1500;
-	private static final long TEN_SECONDS = 10000; 
+	private static final int SUMMARIZER_RATE = 10;
+	private static final int SUMMARIZER_DELAY = 10;
 
-	
 	public static void main(String[] args) {
-
+		
 		ExecutorService handlersService = Executors.newCachedThreadPool();
 		ScheduledExecutorService summarizerService = Executors.newSingleThreadScheduledExecutor();
 		
 		List<Socket> clientSockets = new ArrayList<>();
+//		read port from properties
+		String portString = System.getProperty("port");
+		
+		if (portString == null) {
+			System.out.println("Please sepcify port as a VM property");
+			return;
+		}
+
+		int port = Integer.parseInt(portString);
 	
 		try (BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-				ServerSocket serverSocket = new ServerSocket(PORT);
+				ServerSocket serverSocket = new ServerSocket(port);
 
 		) {
 			System.out.println("News Analyzer Started. To stop it type \"stop\" and hit enter");
-			
 			
 //			Start a thread that will be able to read "stop" from stdin and will stop the server.
 			Thread userInputHandlerThread = new Thread(() -> {
@@ -62,32 +68,7 @@ public class NewsAnalyzer {
 //			Start a scheduled thread that will summarize news items that came over that past 10 seconds
 			List<TimestampedNewsItem> incomingNewsItems = Collections.synchronizedList(new ArrayList<TimestampedNewsItem>());
 			
-			summarizerService.scheduleAtFixedRate(() -> {
-				synchronized (incomingNewsItems) {
-
-					long startTime = System.currentTimeMillis() - TEN_SECONDS;
-//					remove all news items that are older than 10 seconds
-					incomingNewsItems.removeIf(item -> item.getTimestamp()<startTime);
-										
-					int size = incomingNewsItems.size();
-					System.out.println("Positive news count for the past 10 seconds: " + size);
-					
-					if (size > 0) {
-						System.out.println("Top headlines:");
-						incomingNewsItems.stream().map(item -> item.getNewsItem()).sorted((o1, o2) -> {
-							if (o1 != null && o2 != null) {
-								int o1priority = o1.getPriority();
-								int o2priority = o2.getPriority();
-								// switch order to have items with highest priorities at the beginning of the list (descending order)
-								return Integer.compare(o2priority, o1priority);
-							}
-							return 0;
-						}).limit(3).map(item -> item.getHeadline().asString()).distinct()
-								.forEach(line -> System.out.println(line));
-					}
-					System.out.println(" ");
-				}
-			}, RATE, RATE, TimeUnit.SECONDS);
+			summarizerService.scheduleAtFixedRate(new NewsSummarizer(incomingNewsItems), SUMMARIZER_DELAY, SUMMARIZER_RATE, TimeUnit.SECONDS);
 
 			
 //			Upon receiving a connection from News Feeder, run a handler for it

@@ -1,4 +1,4 @@
-package com.feed;
+package com.test;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -9,6 +9,7 @@ import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 import com.common.HeadlineWord;
+import com.feed.HeadlineImpl;
 
 class HeadlineImplTest {
 
